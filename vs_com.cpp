@@ -24,8 +24,9 @@ static void show_usage(const char *progname, int exitcode)
 class VSCom 
 {
     public:
-        VSCom();               // Create object with default serial port
-        VSCom(char *dev_path); // Create object and assign given device
+        VSCom();               // Use default serial port
+        VSCom(char *dev_path); // Open given device
+        char *ParseArgs(int c, char **v);
         int Connect();         // Open the serial port
 
     private:
@@ -42,6 +43,8 @@ int main(int argc, char **argv)
     ssize_t nbytes;
     int fd;
     int ret;
+
+    // VSCom vs_com(ParseArgs(argc, argv));
 
     // Handle input parameters
     if (argc > 1) {
