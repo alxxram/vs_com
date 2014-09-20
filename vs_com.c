@@ -37,13 +37,13 @@ int main(int argc, char **argv)
 
     // Open the USB serial device for blocking read
     do {
-      printf("Opening USB serial driver\n");
-      fd = open(g_ttydev, O_RDWR);
-      if (fd < 0) {
-          printf("ERROR: Failed to open %s: %s\n", g_ttydev, strerror(errno));
-          printf("       Assume not connected. Wait and try again.\n");
-          printf("       (Control-C to terminate).\n");
-          sleep(5);
+        printf("Opening USB serial driver\n");
+        fd = open(g_ttydev, O_RDWR);
+        if (fd < 0) {
+            printf("ERROR: Failed to open %s: %s\n", g_ttydev, strerror(errno));
+            printf("       Assume not connected. Wait and try again.\n");
+            printf("       (Control-C to terminate).\n");
+            sleep(5);
         }
     } while (fd < 0);
     printf("Successfully opened the serial driver\n");
@@ -51,9 +51,9 @@ int main(int argc, char **argv)
     // Configure the serial port in raw mode (at least turn off echo)
     ret = tcgetattr(fd, &tty);
     if (ret < 0) {
-      printf("ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
-      close(fd);
-      return 1;
+        printf("ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
+        close(fd);
+        exit(2);
     }
 
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
@@ -64,39 +64,39 @@ int main(int argc, char **argv)
 
     ret = tcsetattr(fd, TCSANOW, &tty);
     if (ret < 0) {
-      printf("ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
-      close(fd);
-      return 1;
+        printf("ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
+        close(fd);
+        exit(3);
     }
 
     // Wait for messages forever
     unsigned char prev = 0;
     for (;;) {
-      nbytes = read(fd, g_iobuffer, BUFFER_SIZE-1);
-      if (nbytes < 0)
-        {
+        nbytes = read(fd, g_iobuffer, BUFFER_SIZE-1);
+        if (nbytes < 0) {
           printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
-          return 2;
+          exit(4);
         }
-      else if (nbytes == 0)
-        {
+        else if (nbytes == 0) {
           printf("End-of-file encountered\n");
           break;
         }
 
-      g_iobuffer[nbytes] = '\0';
-      printf("\r%s", g_iobuffer);
-      fflush(stdout);
+        g_iobuffer[nbytes] = '\0';
+        printf("\r%s", g_iobuffer);
+        fflush(stdout);
       
-      int i;
-      for(i = 0; i < nbytes; i++) {
-          if ((g_iobuffer[i] != (prev + 1)) &&
-              ((prev == 90) && (g_iobuffer[i] != 65))) {
-            printf ("prev:%d  buf:%d\n", prev, g_iobuffer[i]);
-          }
-          prev = g_iobuffer[i];
-      }
+        // Validate the data
+        // *HACK!  It is checking vs a hard-coded pattern
+        int i;
+        for(i = 0; i < nbytes; i++) {
+            if ((g_iobuffer[i] != (prev + 1)) &&
+                ((prev == 90) && (g_iobuffer[i] != 65))) {
+                printf ("prev:%d  buf:%d\n", prev, g_iobuffer[i]);
+            }
+            prev = g_iobuffer[i];
+        }
     }
 
     close(fd);
