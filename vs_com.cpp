@@ -92,7 +92,8 @@ int main(int argc, char **argv)
     // Wait for messages forever
     unsigned char prev = 0;
     for (;;) {
-        nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
+        //nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
+        nbytes = read(fd, g_iobuffer, 2);
         if (nbytes < 0) {
           printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
@@ -104,11 +105,15 @@ int main(int argc, char **argv)
         }
 
         g_iobuffer[nbytes] = '\0';
-        printf("\r%s", g_iobuffer);
+        //printf("\r%s", g_iobuffer);
+        short int data = 0;
+        memcpy(&data, g_iobuffer, 2);
+        printf("%d\n", data);
         fflush(stdout);
       
         // Validate the data
         // *HACK!  It is checking vs a hard-coded pattern
+        /*
         int i;
         for (i = 0; i < nbytes; i++) {
             if ((g_iobuffer[i] != (prev + 1)) &&
@@ -117,6 +122,7 @@ int main(int argc, char **argv)
             }
             prev = g_iobuffer[i];
         }
+        */
     }
 
     close(fd);
