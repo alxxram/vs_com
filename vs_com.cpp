@@ -92,37 +92,32 @@ int main(int argc, char **argv)
     // Wait for messages forever
     unsigned char prev = 0;
     for (;;) {
-        //nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
-        nbytes = read(fd, g_iobuffer, 2);
+        nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
         if (nbytes < 0) {
           printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
           exit(4);
-        }
-        else if (nbytes == 0) {
+        } else if (nbytes == 0) {
           printf("End-of-file encountered\n");
           break;
         }
 
-        g_iobuffer[nbytes] = '\0';
-        //printf("\r%s", g_iobuffer);
-        short int data = 0;
-        memcpy(&data, g_iobuffer, 2);
-        printf("%d\n", data);
-        fflush(stdout);
+        for (int i = 0; i < nbytes; i++) {
+            printf("%c ", g_iobuffer[i]);
+            if (g_iobuffer[i] == 'Z') {
+                printf("\n");
+            }
+        }
       
         // Validate the data
         // *HACK!  It is checking vs a hard-coded pattern
-        /*
-        int i;
-        for (i = 0; i < nbytes; i++) {
-            if ((g_iobuffer[i] != (prev + 1)) &&
-                ((prev == 90) && (g_iobuffer[i] != 65))) {
-                printf("prev:%d  buf:%d\n", prev, g_iobuffer[i]);
+        for (int j = 0; j < nbytes; j++) {
+            if ((g_iobuffer[j] != (prev + 1)) &&
+                ((prev == 90) && (g_iobuffer[j] != 65))) {
+                printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, g_iobuffer[j]);
             }
-            prev = g_iobuffer[i];
+            prev = g_iobuffer[j];
         }
-        */
     }
 
     close(fd);
