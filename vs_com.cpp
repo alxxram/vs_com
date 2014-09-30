@@ -39,10 +39,11 @@ int ParseArgs(int argc, char **argv)
             break;
             default:
                 fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
-                exit(2); //TODO Return error code instead
+                return(-1);
         }
     }
-    return 0;
+
+    return(0);
 }
 
 int Connect(int &fd)
@@ -63,12 +64,11 @@ int Connect(int &fd)
     } while (fd < 0);
     printf("Successfully opened the serial driver\n");
 
-    // Configure the serial port in raw mode (at least turn off echo)
     ret = tcgetattr(fd, &tty);
     if (ret < 0) {
-        printf("ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
+        fprintf(stderr, "ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
         close(fd);
-        exit(3);
+        return(-1);
     }
 
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
@@ -79,33 +79,39 @@ int Connect(int &fd)
 
     ret = tcsetattr(fd, TCSANOW, &tty);
     if (ret < 0) {
-        printf("ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
+        fprintf(stderr, "ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
         close(fd);
-        exit(4);
+        return(-1);
     }
 
-    return 0;
+    return(0);
 }
 
 int main(int argc, char **argv)
 {
-    //struct termios tty;
     ssize_t nbytes;
-    int fd;
-    //int ret;
+    int fd, ret;
 
     // VSCom vs_com;
-    ParseArgs(argc, argv);
-    Connect(fd);
+
+    // Parse command line arguments
+    if ((ret = ParseArgs(argc, argv)) < 0) {
+        exit(-1);
+    }
+
+    // Open and configure serial port
+    if ((ret = Connect(fd)) < 0) {
+        exit(-1);
+    }
 
     // Wait for messages forever
     unsigned char prev = 0;
     for (;;) {
         nbytes = read(fd, g_iobuffer, BUFFER_SIZE);
         if (nbytes < 0) {
-          printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
+          fprintf(stderr, "ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
-          exit(5);
+          exit(-1);
         } else if (nbytes == 0) {
           printf("End-of-file encountered\n");
           break;
