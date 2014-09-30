@@ -6,11 +6,14 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <assert.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 1024 + 1
 
 static const char *g_ttydev = "/dev/ttyUSB0";
-static char g_iobuffer[BUFFER_SIZE];
+static unsigned char g_iobuffer[BUFFER_SIZE];
+static bool alpha = false;
+static int fd;
 
 // Validation Side Communications Class
 class VSCom 
@@ -32,10 +35,13 @@ class VSCom
 int ParseArgs(int argc, char **argv)
 {
     int opt;
-    while ((opt = getopt(argc, argv, "d:")) != -1) {
+    while ((opt = getopt(argc, argv, "ad:")) != -1) {
         switch (opt) {
             case 'd':
                 g_ttydev = optarg;
+            break;
+            case 'a':
+                alpha = true;
             break;
             default:
                 fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
@@ -87,51 +93,84 @@ int Connect(int &fd)
     return(0);
 }
 
+void AlphaMode(ssize_t nbytes)
+{
+    for (int i = 0; i < nbytes; i++) {
+        printf("%c ", g_iobuffer[i]);
+        if (g_iobuffer[i] == 'Z') {
+            printf("\n");
+        }
+    }
+
+    // Validate the data
+    unsigned char prev = 0;
+    for (int j = 0; j < nbytes; j++) {
+        if ((g_iobuffer[j] != (prev + 1)) &&
+            ((prev == 90) && (g_iobuffer[j] != 65))) {
+            printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, g_iobuffer[j]);
+        }
+        prev = g_iobuffer[j];
+    }
+}
+
+void PrintData(ssize_t nbytes)
+{
+    // Print the raw data
+    for (int i = 0; i < nbytes; i++) {
+        printf("%x ", g_iobuffer[i]);
+    }
+
+    // Then print the data as a string
+    assert(nbytes < BUFFER_SIZE);
+    g_iobuffer[nbytes] = 0;
+    printf("\n%s\n\n", g_iobuffer);
+}
+
+ssize_t ReadAndPrint()
+{
+    // Read up to BUFFER_SIZE bytes
+    ssize_t nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
+
+    if (nbytes < 0) {
+        fprintf(stderr, "ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
+        close(fd);
+        return(nbytes);
+    } else if (nbytes == 0) {
+        fprintf(stderr, "End-of-file encountered\n");
+        return(nbytes);
+    }
+
+    if (alpha) {
+        AlphaMode(nbytes);
+    } else {
+        PrintData(nbytes);
+    }
+
+    return(nbytes);
+}
+
 int main(int argc, char **argv)
 {
     ssize_t nbytes;
-    int fd, ret;
+    int ret;
 
     // VSCom vs_com;
 
     // Parse command line arguments
     if ((ret = ParseArgs(argc, argv)) < 0) {
-        exit(-1);
+        exit(ret);
     }
 
     // Open and configure serial port
     if ((ret = Connect(fd)) < 0) {
-        exit(-1);
+        exit(ret);
     }
 
     // Wait for messages forever
-    unsigned char prev = 0;
     for (;;) {
-        nbytes = read(fd, g_iobuffer, BUFFER_SIZE);
+        nbytes = ReadAndPrint();
         if (nbytes < 0) {
-          fprintf(stderr, "ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
-          close(fd);
-          exit(-1);
-        } else if (nbytes == 0) {
-          printf("End-of-file encountered\n");
-          break;
-        }
-
-        for (int i = 0; i < nbytes; i++) {
-            printf("%c ", g_iobuffer[i]);
-            if (g_iobuffer[i] == 'Z') {
-                printf("\n");
-            }
-        }
-      
-        // Validate the data
-        // *HACK!  It is checking vs a hard-coded pattern
-        for (int j = 0; j < nbytes; j++) {
-            if ((g_iobuffer[j] != (prev + 1)) &&
-                ((prev == 90) && (g_iobuffer[j] != 65))) {
-                printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, g_iobuffer[j]);
-            }
-            prev = g_iobuffer[j];
+            exit(nbytes);
         }
     }
 
