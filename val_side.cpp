@@ -10,29 +10,28 @@ int main(int argc, char **argv)
     ssize_t nbytes;
     int ret;
 
-    // VSCom vs_com;
+    VSCom vs_com;
 
     // Parse command line arguments
-    if ((ret = ParseArgs(argc, argv)) < 0) {
+    if ((ret = vs_com.ParseArgs(argc, argv)) < 0) {
         exit(ret);
     }
 
     // Open and configure serial port
-    if ((ret = Connect(fd)) < 0) {
+    if ((ret = vs_com.Connect()) < 0) {
         exit(ret);
     }
 
     // Wait for messages forever
-    for (;;) {
-        nbytes = ReadAndPrint();
+    while (1) {
+        nbytes = vs_com.ReadAndPrint();
         if (nbytes < 0) {
             exit(nbytes);
         }
         
-        usleep(1);
+        usleep(10);
     }
 
-    close(fd);
     return 0;
 }
 

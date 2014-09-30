@@ -1,15 +1,15 @@
 #include "vs_com.h"
 
-int ParseArgs(int argc, char **argv)
+int VSCom::ParseArgs(int argc, char **argv)
 {
     int opt;
     while ((opt = getopt(argc, argv, "ad:")) != -1) {
         switch (opt) {
             case 'd':
-                g_ttydev = optarg;
+                m_ttydev = optarg;
             break;
             case 'a':
-                alpha = true;
+                m_alpha = true;
             break;
             default:
                 fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
@@ -20,7 +20,7 @@ int ParseArgs(int argc, char **argv)
     return(0);
 }
 
-int Connect(int &fd)
+int VSCom::Connect()
 {
     int ret;
     struct termios tty;
@@ -28,20 +28,20 @@ int Connect(int &fd)
     // Open the USB serial device for blocking read
     do {
         printf("Opening USB serial driver\n");
-        fd = open(g_ttydev, O_RDWR);
-        if (fd < 0) {
-            printf("ERROR: Failed to open %s: %s\n", g_ttydev, strerror(errno));
+        m_fd = open(m_ttydev, O_RDWR);
+        if (m_fd < 0) {
+            printf("ERROR: Failed to open %s: %s\n", m_ttydev, strerror(errno));
             printf("       Assume not connected. Wait and try again.\n");
             printf("       (Control-C to terminate).\n");
             sleep(5);
         }
-    } while (fd < 0);
+    } while (m_fd < 0);
     printf("Successfully opened the serial driver\n");
 
-    ret = tcgetattr(fd, &tty);
+    ret = tcgetattr(m_fd, &tty);
     if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
-        close(fd);
+        fprintf(stderr, "ERROR: Failed to get termios for %s: %s\n", m_ttydev, strerror(errno));
+        close(m_fd);
         return(-1);
     }
 
@@ -51,21 +51,21 @@ int Connect(int &fd)
     tty.c_cflag &= ~(CSIZE|PARENB);
     tty.c_cflag |= CS8;
 
-    ret = tcsetattr(fd, TCSANOW, &tty);
+    ret = tcsetattr(m_fd, TCSANOW, &tty);
     if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
-        close(fd);
+        fprintf(stderr, "ERROR: Failed to set termios for %s: %s\n", m_ttydev, strerror(errno));
+        close(m_fd);
         return(-1);
     }
 
     return(0);
 }
 
-void AlphaMode(ssize_t nbytes)
+void VSCom::AlphaMode(ssize_t nbytes)
 {
     for (int i = 0; i < nbytes; i++) {
-        printf("%c ", g_iobuffer[i]);
-        if (g_iobuffer[i] == 'Z') {
+        printf("%c ", m_iobuffer[i]);
+        if (m_iobuffer[i] == 'Z') {
             printf("\n");
         }
     }
@@ -73,42 +73,42 @@ void AlphaMode(ssize_t nbytes)
     // Validate the data
     unsigned char prev = 0;
     for (int j = 0; j < nbytes; j++) {
-        if ((g_iobuffer[j] != (prev + 1)) &&
-            ((prev == 90) && (g_iobuffer[j] != 65))) {
-            printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, g_iobuffer[j]);
+        if ((m_iobuffer[j] != (prev + 1)) &&
+            ((prev == 90) && (m_iobuffer[j] != 65))) {
+            printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, m_iobuffer[j]);
         }
-        prev = g_iobuffer[j];
+        prev = m_iobuffer[j];
     }
 }
 
-void PrintData(ssize_t nbytes)
+void VSCom::PrintData(ssize_t nbytes)
 {
     // Print the raw data
     for (int i = 0; i < nbytes; i++) {
-        printf("%x ", g_iobuffer[i]);
+        printf("0x%x ", m_iobuffer[i]);
     }
 
     // Then print the data as a string
     assert(nbytes < BUFFER_SIZE);
-    g_iobuffer[nbytes] = 0;
-    printf("\n%s\n\n", g_iobuffer);
+    m_iobuffer[nbytes] = 0;
+    printf("\n%s\n\n", m_iobuffer);
 }
 
-ssize_t ReadAndPrint()
+ssize_t VSCom::ReadAndPrint()
 {
     // Read up to BUFFER_SIZE bytes
-    ssize_t nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
+    ssize_t nbytes = read(m_fd, m_iobuffer, BUFFER_SIZE - 1);
 
     if (nbytes < 0) {
-        fprintf(stderr, "ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
-        close(fd);
+        fprintf(stderr, "ERROR: Failed to read from %s: %s\n", m_ttydev, strerror(errno));
+        close(m_fd);
         return(nbytes);
     } else if (nbytes == 0) {
-        fprintf(stderr, "End-of-file encountered\n");
+        fprintf(stderr, "WARNING: End-of-file encountered\n");
         return(nbytes);
     }
 
-    if (alpha) {
+    if (m_alpha) {
         AlphaMode(nbytes);
     } else {
         PrintData(nbytes);
