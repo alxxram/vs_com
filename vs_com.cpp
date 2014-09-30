@@ -18,26 +18,19 @@ class VSCom
     public:
         VSCom();               // Use default serial port
         VSCom(char *dev_path); // Open given device
-        char *ParseArgs(int c, char **v);
+        int ParseArgs(int c, char **v);
         int Connect();         // Open the serial port
 
     private:
         int m_fd;               // The file descriptor for the serial port
         char *m_dev_path;       // The path to the port in /dev
-        unsigned char m_buffer; // Where data will be read in to
+        unsigned char m_buffer[BUFFER_SIZE]; // Where data will be read in to
         struct termios m_tty;   // The serial port's configuration structure
         ssize_t m_nbytes;       // How many bytes are read at a time
 };
 
-int main(int argc, char **argv)
+int ParseArgs(int argc, char **argv)
 {
-    struct termios tty;
-    ssize_t nbytes;
-    int fd;
-    int ret;
-
-    // VSCom vs_com(ParseArgs(argc, argv));
-
     int opt;
     while ((opt = getopt(argc, argv, "d:")) != -1) {
         switch (opt) {
@@ -46,9 +39,16 @@ int main(int argc, char **argv)
             break;
             default:
                 fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
-                exit(2);
+                exit(2); //TODO Return error code instead
         }
     }
+    return 0;
+}
+
+int Connect(int &fd)
+{
+    int ret;
+    struct termios tty;
 
     // Open the USB serial device for blocking read
     do {
@@ -84,10 +84,24 @@ int main(int argc, char **argv)
         exit(4);
     }
 
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    //struct termios tty;
+    ssize_t nbytes;
+    int fd;
+    //int ret;
+
+    // VSCom vs_com;
+    ParseArgs(argc, argv);
+    Connect(fd);
+
     // Wait for messages forever
     unsigned char prev = 0;
     for (;;) {
-        nbytes = read(fd, g_iobuffer, BUFFER_SIZE - 1);
+        nbytes = read(fd, g_iobuffer, BUFFER_SIZE);
         if (nbytes < 0) {
           printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
