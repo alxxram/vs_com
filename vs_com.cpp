@@ -1,36 +1,4 @@
-#include <stdio.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <unistd.h>
-#include <assert.h>
-
-#define BUFFER_SIZE 1024 + 1
-
-static const char *g_ttydev = "/dev/ttyUSB0";
-static unsigned char g_iobuffer[BUFFER_SIZE];
-static bool alpha = false;
-static int fd;
-
-// Validation Side Communications Class
-class VSCom 
-{
-    public:
-        VSCom();               // Use default serial port
-        VSCom(char *dev_path); // Open given device
-        int ParseArgs(int c, char **v);
-        int Connect();         // Open the serial port
-
-    private:
-        int m_fd;               // The file descriptor for the serial port
-        char *m_dev_path;       // The path to the port in /dev
-        unsigned char m_buffer[BUFFER_SIZE]; // Where data will be read in to
-        struct termios m_tty;   // The serial port's configuration structure
-        ssize_t m_nbytes;       // How many bytes are read at a time
-};
+#include "vs_com.h"
 
 int ParseArgs(int argc, char **argv)
 {
@@ -172,6 +140,8 @@ int main(int argc, char **argv)
         if (nbytes < 0) {
             exit(nbytes);
         }
+        
+        usleep(1);
     }
 
     close(fd);
