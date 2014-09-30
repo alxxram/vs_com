@@ -7,18 +7,10 @@
 #include <errno.h>
 #include <unistd.h>
 
-#define DEFAULT_TTYDEV "/dev/ttyUSB0"
-#define BUFFER_SIZE    1024
+#define BUFFER_SIZE 1024
 
-static const char *g_ttydev = DEFAULT_TTYDEV;
+static const char *g_ttydev = "/dev/ttyUSB0";
 static char g_iobuffer[BUFFER_SIZE];
-
-// Show_usage
-static void show_usage(const char *progname, int exitcode)
-{
-    fprintf(stderr, "USAGE: %s [<ttydev>]\n", progname);
-    exit(exitcode);
-}
 
 // Validation Side Communications Class
 class VSCom 
@@ -46,13 +38,16 @@ int main(int argc, char **argv)
 
     // VSCom vs_com(ParseArgs(argc, argv));
 
-    // Handle input parameters
-    if (argc > 1) {
-        if (argc > 2) {
-            fprintf(stderr, "Too many arguments on command line\n");
-            show_usage(argv[0], 1);
+    int opt;
+    while ((opt = getopt(argc, argv, "d:")) != -1) {
+        switch (opt) {
+            case 'd':
+                g_ttydev = optarg;
+            break;
+            default:
+                fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
+                exit(2);
         }
-        g_ttydev = argv[1];
     }
 
     // Open the USB serial device for blocking read
@@ -73,7 +68,7 @@ int main(int argc, char **argv)
     if (ret < 0) {
         printf("ERROR: Failed to get termios for %s: %s\n", g_ttydev, strerror(errno));
         close(fd);
-        exit(2);
+        exit(3);
     }
 
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
@@ -86,7 +81,7 @@ int main(int argc, char **argv)
     if (ret < 0) {
         printf("ERROR: Failed to set termios for %s: %s\n", g_ttydev, strerror(errno));
         close(fd);
-        exit(3);
+        exit(4);
     }
 
     // Wait for messages forever
@@ -96,7 +91,7 @@ int main(int argc, char **argv)
         if (nbytes < 0) {
           printf("ERROR: Failed to read from %s: %s\n", g_ttydev, strerror(errno));
           close(fd);
-          exit(4);
+          exit(5);
         } else if (nbytes == 0) {
           printf("End-of-file encountered\n");
           break;
