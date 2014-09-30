@@ -13,10 +13,10 @@
 
 #define BUFFER_SIZE 1024 + 1
 
-static const char *g_ttydev = "/dev/ttyUSB0";
-static unsigned char g_iobuffer[BUFFER_SIZE];
-static bool alpha = false;
-static int fd;
+extern const char *g_ttydev;
+extern unsigned char g_iobuffer[BUFFER_SIZE];
+extern bool alpha;
+extern int fd;
 
 int ParseArgs(int argc, char **argv);
 int Connect(int &fd);
