@@ -1,10 +1,5 @@
 #include "vs_com.h"
 
-const char *g_ttydev = "/dev/ttyUSB0";
-unsigned char g_iobuffer[BUFFER_SIZE];
-bool alpha = false;
-int fd;
-
 int main(int argc, char **argv)
 {
     ssize_t nbytes;
@@ -24,7 +19,7 @@ int main(int argc, char **argv)
 
     // Wait for messages forever
     while (1) {
-        nbytes = vs_com.ReadAndPrint();
+        nbytes = vs_com.Read();
         if (nbytes < 0) {
             exit(nbytes);
         }

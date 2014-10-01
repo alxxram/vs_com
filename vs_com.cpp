@@ -3,16 +3,19 @@
 int VSCom::ParseArgs(int argc, char **argv)
 {
     int opt;
-    while ((opt = getopt(argc, argv, "ad:")) != -1) {
+    while ((opt = getopt(argc, argv, "ad:P")) != -1) {
         switch (opt) {
-            case 'd':
-                m_ttydev = optarg;
-            break;
             case 'a':
                 m_alpha = true;
             break;
+            case 'd':
+                m_ttydev = optarg;
+            break;
+            case 'P':
+                m_print = false;
+            break;
             default:
-                fprintf(stderr, "Usage: %s [-d dev_path]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-a -P -d <device_path>]\n", argv[0]);
                 return(-1);
         }
     }
@@ -61,7 +64,7 @@ int VSCom::Connect()
     return(0);
 }
 
-void VSCom::AlphaMode(ssize_t nbytes)
+int VSCom::AlphaMode(ssize_t nbytes)
 {
     for (int i = 0; i < nbytes; i++) {
         printf("%c ", m_iobuffer[i]);
@@ -75,10 +78,14 @@ void VSCom::AlphaMode(ssize_t nbytes)
     for (int j = 0; j < nbytes; j++) {
         if ((m_iobuffer[j] != (prev + 1)) &&
             ((prev == 90) && (m_iobuffer[j] != 65))) {
-            printf("nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, m_iobuffer[j]);
+            fprintf(stderr, "ERROR: Validation of the alpha sequence failed.\n");
+            fprintf(stderr, "nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, m_iobuffer[j]);
+            return(-1);
         }
         prev = m_iobuffer[j];
     }
+
+    return(0);
 }
 
 void VSCom::PrintData(ssize_t nbytes)
@@ -94,7 +101,7 @@ void VSCom::PrintData(ssize_t nbytes)
     printf("\n%s\n\n", m_iobuffer);
 }
 
-ssize_t VSCom::ReadAndPrint()
+ssize_t VSCom::Read()
 {
     // Read up to BUFFER_SIZE bytes
     ssize_t nbytes = read(m_fd, m_iobuffer, BUFFER_SIZE - 1);
@@ -110,7 +117,7 @@ ssize_t VSCom::ReadAndPrint()
 
     if (m_alpha) {
         AlphaMode(nbytes);
-    } else {
+    } else if (m_print) {
         PrintData(nbytes);
     }
 
