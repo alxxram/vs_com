@@ -8,6 +8,10 @@
 
 #include <boost/program_options.hpp>
 
+/// Will store up to 1KB of data from the serial port per read.
+/// The extra byte will be available for NULL so that it can be
+/// treated as a null terminated string.
+///
 #define BUFFER_SIZE 1024 + 1
 
 using namespace std;
