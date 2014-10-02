@@ -5,6 +5,7 @@
 ///
 /// \param argc The argc from main
 /// \param argv The argv from main
+/// \return 0 on success, -1 on failure
 ///
 /// This function uses Boost to parse the command line arguments.
 /// The parsing uses a try/catch block to handle invalid parameter
@@ -63,6 +64,8 @@ int VSCom::ParseArgs(int argc, char **argv)
 
 /// \brief Opens and configures a serial connection
 ///
+/// \return 0 on success, -1 on failure
+///
 /// Will open and configure the serial port at the given path.  The port is configured for
 /// blocking reads.
 /// TODO B57600 baud rate is hardcoded.  Allow user to specify.
@@ -74,20 +77,20 @@ int VSCom::Connect()
 
     // Open the serial device for blocking read
     do {
-        printf("Opening serial device\n");
+        cout << "Opening serial device" << endl;
         m_fd = open(m_ttydev, O_RDWR);
         if (m_fd < 0) {
-            printf("ERROR: Failed to open %s: %s\n", m_ttydev, strerror(errno));
-            printf("       Assume not connected. Wait and try again.\n");
-            printf("       (Control-C to terminate).\n");
+            cout << "ERROR: Failed to open " << m_ttydev << ": " << strerror(errno) << endl;
+            cout << "       Assume not connected. Wait and try again." << endl;
+            cout << "       (Control-C to terminate)." << endl;
             sleep(5);
         }
     } while (m_fd < 0);
-    printf("Successfully opened the serial driver\n");
+    cout << "Successfully opened the serial driver" << endl;
 
     ret = tcgetattr(m_fd, &tty);
     if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to get termios for %s: %s\n", m_ttydev, strerror(errno));
+        cerr << "ERROR: Failed to get termios for " << m_ttydev << ": " <<  strerror(errno) << endl;
         close(m_fd);
         return(-1);
     }
@@ -100,7 +103,7 @@ int VSCom::Connect()
 
     ret = tcsetattr(m_fd, TCSANOW, &tty);
     if (ret < 0) {
-        fprintf(stderr, "ERROR: Failed to set termios for %s: %s\n", m_ttydev, strerror(errno));
+        cerr << "ERROR: Failed to set termios for " << m_ttydev << ": " <<  strerror(errno) << endl;
         close(m_fd);
         return(-1);
     }
@@ -111,6 +114,7 @@ int VSCom::Connect()
 /// \brief Will validate that the alphabet in caps was received
 ///
 /// \param nbytes The number of bytes received by the read() call
+/// \return 0 on success, -1 on failure
 ///
 /// This can be used to validate the serial connection.  It will assume that the alphabet, in all
 /// caps, will be sent.  It will print to the screen whatever it receives.  It will print to
@@ -118,10 +122,11 @@ int VSCom::Connect()
 ///
 int VSCom::AlphaMode(ssize_t nbytes)
 {
+    // Print the letters to the screen
     for (int i = 0; i < nbytes; i++) {
-        printf("%c ", m_iobuffer[i]);
+        cout << m_iobuffer[i];
         if (m_iobuffer[i] == 'Z') {
-            printf("\n");
+            cout << endl;
         }
     }
 
@@ -130,8 +135,9 @@ int VSCom::AlphaMode(ssize_t nbytes)
     for (int j = 0; j < nbytes; j++) {
         if ((m_iobuffer[j] != (prev + 1)) &&
             ((prev == 90) && (m_iobuffer[j] != 65))) {
-            fprintf(stderr, "ERROR: Validation of the alpha sequence failed.\n");
-            fprintf(stderr, "nbytes:%zd j:%d prev:%d  buf:%d\n", nbytes, j, prev, m_iobuffer[j]);
+            cerr << "ERROR: Validation of the alpha sequence failed." << endl;
+            cerr << "nbytes:" << nbytes << " j:" << j;
+            cerr << " prev:" << prev << " buf:" <<  m_iobuffer[j] << endl;
             return(-1);
         }
         prev = m_iobuffer[j];
@@ -140,30 +146,45 @@ int VSCom::AlphaMode(ssize_t nbytes)
     return(0);
 }
 
+/// \brief Prints received data to screen
+///
+/// \param nbytes The number of bytes received by the read() call
+///
+/// For every read() call, it prints the bytes to the screen.  First, it prints the raw data as
+/// a hex value.  Then, on the next line it prints the same data as a string.
+///
 void VSCom::PrintData(ssize_t nbytes)
 {
     // Print the raw data
     for (int i = 0; i < nbytes; i++) {
-        printf("0x%x ", m_iobuffer[i]);
+        cout << "0x" << hex << (unsigned int)m_iobuffer[i] << " ";
     }
 
     // Then print the data as a string
     assert(nbytes < BUFFER_SIZE);
     m_iobuffer[nbytes] = 0;
-    printf("\n%s\n\n", m_iobuffer);
+    cout << endl << m_iobuffer << endl << endl;
 }
 
+/// \brief Reads data from the serial port and returns the number of bytes read
+///
+/// \return The number of bytes read.
+///
+/// Calls the read() function to read from the serial port and stores it in.
+/// Will either print and validate the alphabet if alpha mode is on, or it will just print the
+/// raw data to the screen if "print" is enabled.
+///
 ssize_t VSCom::Read()
 {
-    // Read up to BUFFER_SIZE bytes
+    // Read up to BUFFER_SIZE-1 bytes
     ssize_t nbytes = read(m_fd, m_iobuffer, BUFFER_SIZE - 1);
 
     if (nbytes < 0) {
-        fprintf(stderr, "ERROR: Failed to read from %s: %s\n", m_ttydev, strerror(errno));
+        cerr << "ERROR: Failed to read from " << m_ttydev << ": " << strerror(errno);
         close(m_fd);
         return(nbytes);
     } else if (nbytes == 0) {
-        fprintf(stderr, "WARNING: End-of-file encountered\n");
+        cerr << "WARNING: End-of-file encountered" << endl;
         return(nbytes);
     }
 
