@@ -1,17 +1,15 @@
-CC=g++
-CFLAGS=-c -Wall
+EXEC = val_side
+SOURCES = $(wildcard *.cpp)
+HEADERS = $(wildcard *.h*)
+OBJECTS = $(SOURCES:.cpp=.o)
 
-all: val_side
+all: $(EXEC)
 
-val_side: val_side.o vs_com.o
-	$(CC) val_side.o vs_com.o -o val_side
+val_side: $(OBJECTS)
+	g++ $(OBJECTS) -o $(EXEC) -lboost_program_options
 
-val_side.o: val_side.cpp
-	$(CC) $(CFLAGS) val_side.cpp
-
-vs_com.o: vs_com.cpp
-	$(CC) $(CFLAGS) vs_com.cpp
+%.o: %.cpp $(HEADERS)
+	g++ -c $< -o $@
 
 clean:
-	rm -rf *o val_side
-
+	rm -f $(EXEC) $(OBJECTS)

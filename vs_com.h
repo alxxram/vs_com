@@ -11,7 +11,12 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <boost/program_options.hpp>
+#include <string>
+
 #define BUFFER_SIZE 1024 + 1
+
+using namespace std;
 
 /// \brief Validation side serial communications class
 ///
@@ -27,8 +32,7 @@ class VSCom
     public:
         /// \brief Constructor initializes some member variables
         ///
-        VSCom() : m_fd(0), m_ttydev("/dev/ttyUSB0"), m_alpha(false),
-                  m_print(true) { }
+        VSCom() : m_fd(0), m_ttydev("/dev/ttyUSB0"), m_alpha(false), m_print(true) { }
 
         /// \brief Desctrcutor closes the serial file descriptor
         ///

@@ -1,23 +1,50 @@
 #include "vs_com.h"
 
+//using namespace std;
+
+/// \brief
+///
 int VSCom::ParseArgs(int argc, char **argv)
 {
-    int opt;
-    while ((opt = getopt(argc, argv, "ad:P")) != -1) {
-        switch (opt) {
-            case 'a':
-                m_alpha = true;
-            break;
-            case 'd':
-                m_ttydev = optarg;
-            break;
-            case 'P':
-                m_print = false;
-            break;
-            default:
-                fprintf(stderr, "Usage: %s [-a -P -d <device_path>]\n", argv[0]);
-                return(-1);
+    namespace po = boost::program_options;
+    po::options_description desc("Usage");
+    desc.add_options()
+        ("help,h", "Display this help message")
+        ("alpha,a", "Enable Alpha mode")
+        ("path,p", po::value<string>(), "Path to serial device")
+        ("do_not_print,D", "Do not print received data to screen");
+
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm); // This can throw
+
+        if (vm.count("alpha")) {
+           m_alpha = true;
         }
+
+        if (vm.count("path")) {
+            if (vm["path"].as<string>() == "/dev/tty") {
+                cerr << "ERROR: /dev/tty cannot be used\n";
+                return(-1);
+            }
+            m_ttydev = vm["path"].as<string>().c_str();
+        }
+
+        if (vm.count("do_not_print")) {
+            m_print = false;
+        }
+
+        if (vm.count("help")) {
+           cout << desc << endl;
+            exit(0);
+        }
+
+        po::notify(vm); // This will throw
+    }
+    catch(po::error &e) {
+        cerr << "ERROR: " << e.what() << endl;
+        cerr << desc << endl;
+        return(-1);
     }
 
     return(0);
