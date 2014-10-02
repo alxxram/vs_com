@@ -20,6 +20,7 @@
 int VSCom::ParseArgs(int argc, char **argv)
 {
     namespace po = boost::program_options;
+
     po::options_description desc("Usage");
     desc.add_options()
         ("help,h", "Display this help message")
@@ -36,9 +37,6 @@ int VSCom::ParseArgs(int argc, char **argv)
         }
 
         if (vm.count("path")) {
-            if (vm["path"].as<string>() == "/dev/tty") {
-                throw (po::error("/dev/tty should not be used"));
-            }
             m_ttydev = vm["path"].as<string>().c_str();
         }
 
@@ -130,7 +128,7 @@ int VSCom::AlphaMode(ssize_t nbytes)
         }
     }
 
-    // Validate the data
+    // Validate the data sequence
     unsigned char prev = 0;
     for (int j = 0; j < nbytes; j++) {
         if ((m_iobuffer[j] != (prev + 1)) &&
@@ -168,7 +166,7 @@ void VSCom::PrintData(ssize_t nbytes)
 
 /// \brief Reads data from the serial port and returns the number of bytes read
 ///
-/// \return The number of bytes read.
+/// \return The number of bytes read or negative value on error
 ///
 /// Calls the read() function to read from the serial port and stores it in.
 /// Will either print and validate the alphabet if alpha mode is on, or it will just print the

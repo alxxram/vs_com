@@ -1,18 +1,12 @@
 #ifndef VS_COM_H
 #define VS_COM_H
 
-#include <stdio.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <termios.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include <boost/program_options.hpp>
-#include <string>
 
 #define BUFFER_SIZE 1024 + 1
 
@@ -26,6 +20,10 @@ using namespace std;
 /// There is also an "Alpha" mode that expects the alphabet (in caps) to be
 /// continually come in the I/O stream.
 /// In Alpha mode, the stream will be validated.
+///
+/// TODO
+///     Allow the user to specify the baud rate.  Currently it's fixed to 57600
+///     Use try/catch/throw instead of return codes.
 ///
 class VSCom 
 {

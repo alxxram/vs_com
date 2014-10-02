@@ -1,5 +1,7 @@
 #include "vs_com.h"
 
+/// \brief Uses the VScom class to read from the serial port forever
+///
 int main(int argc, char **argv)
 {
     ssize_t nbytes;
