@@ -1,8 +1,20 @@
 #include "vs_com.h"
+#include <sys/signal.h>
 
-//using namespace std;
-
-/// \brief
+/// \brief Will parse the command line arguments and set member variables
+///
+/// \param argc The argc from main
+/// \param argv The argv from main
+///
+/// This function uses Boost to parse the command line arguments.
+/// The parsing uses a try/catch block to handle invalid parameter
+/// errors.
+///
+/// The command line arguments for this module are:
+///     --help (-h)     Prints the usage message
+///     --alpha (-a)    Enables Alpha mode which validates that the alphabet is received
+///     --path (-p)     Path to the serial device i.e. /dev/ttyUSB0
+///     --do_not_print (-D)  Do not print received data to the screen
 ///
 int VSCom::ParseArgs(int argc, char **argv)
 {
@@ -24,8 +36,7 @@ int VSCom::ParseArgs(int argc, char **argv)
 
         if (vm.count("path")) {
             if (vm["path"].as<string>() == "/dev/tty") {
-                cerr << "ERROR: /dev/tty cannot be used\n";
-                return(-1);
+                throw (po::error("/dev/tty should not be used"));
             }
             m_ttydev = vm["path"].as<string>().c_str();
         }
@@ -35,11 +46,11 @@ int VSCom::ParseArgs(int argc, char **argv)
         }
 
         if (vm.count("help")) {
-           cout << desc << endl;
+            cout << desc << endl;
             exit(0);
         }
 
-        po::notify(vm); // This will throw
+        po::notify(vm);
     }
     catch(po::error &e) {
         cerr << "ERROR: " << e.what() << endl;
@@ -50,14 +61,20 @@ int VSCom::ParseArgs(int argc, char **argv)
     return(0);
 }
 
+/// \brief Opens and configures a serial connection
+///
+/// Will open and configure the serial port at the given path.  The port is configured for
+/// blocking reads.
+/// TODO B57600 baud rate is hardcoded.  Allow user to specify.
+///
 int VSCom::Connect()
 {
     int ret;
     struct termios tty;
 
-    // Open the USB serial device for blocking read
+    // Open the serial device for blocking read
     do {
-        printf("Opening USB serial driver\n");
+        printf("Opening serial device\n");
         m_fd = open(m_ttydev, O_RDWR);
         if (m_fd < 0) {
             printf("ERROR: Failed to open %s: %s\n", m_ttydev, strerror(errno));
@@ -75,11 +92,11 @@ int VSCom::Connect()
         return(-1);
     }
 
-    tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
-    tty.c_oflag &= ~OPOST;
+    // TODO  Allow user to specify baud
+    tty.c_cflag = B57600 | CRTSCTS | CS8 | CLOCAL | CREAD;
+    tty.c_iflag = IGNPAR;
+    tty.c_oflag = 0;
     tty.c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
-    tty.c_cflag &= ~(CSIZE|PARENB);
-    tty.c_cflag |= CS8;
 
     ret = tcsetattr(m_fd, TCSANOW, &tty);
     if (ret < 0) {
@@ -91,6 +108,14 @@ int VSCom::Connect()
     return(0);
 }
 
+/// \brief Will validate that the alphabet in caps was received
+///
+/// \param nbytes The number of bytes received by the read() call
+///
+/// This can be used to validate the serial connection.  It will assume that the alphabet, in all
+/// caps, will be sent.  It will print to the screen whatever it receives.  It will print to
+/// stderr if there is a failure.
+///
 int VSCom::AlphaMode(ssize_t nbytes)
 {
     for (int i = 0; i < nbytes; i++) {
