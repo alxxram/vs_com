@@ -1,5 +1,4 @@
 #include "vs_com.h"
-#include <sys/signal.h>
 
 /// \brief Will parse the command line arguments and set member variables
 ///
