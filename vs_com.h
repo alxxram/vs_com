@@ -9,6 +9,7 @@
 #include <boost/program_options.hpp>
 
 // TeamCity 1
+// TeamCity 2
 
 /// Will store up to 1KB of data from the serial port per read.
 /// The extra byte will be available for NULL so that it can be
