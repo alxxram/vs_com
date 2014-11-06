@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <assert.h>
+#include <iostream>
 
 #include <boost/program_options.hpp>
 
