@@ -22,6 +22,7 @@ int VSCom::ParseArgs(int argc, char **argv)
 
     po::options_description desc("Usage");
     desc.add_options()
+        ("version,v", "Display version")
         ("help,h", "Display this help message")
         ("alpha,a", "Enable Alpha mode")
         ("path,p", po::value<string>(), "Path to serial device")
@@ -45,6 +46,11 @@ int VSCom::ParseArgs(int argc, char **argv)
 
         if (vm.count("help")) {
             cout << desc << endl;
+            exit(0);
+        }
+
+        if (vm.count("version")) {
+            cerr << "v6.0" << endl;
             exit(0);
         }
 
