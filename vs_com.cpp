@@ -50,7 +50,7 @@ int VSCom::ParseArgs(int argc, char **argv)
         }
 
         if (vm.count("version")) {
-            cerr << "v8.0" << endl;
+            cerr << "v9.0" << endl;
             exit(0);
         }
 
