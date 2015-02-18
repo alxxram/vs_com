@@ -12,6 +12,10 @@ namespace {
             MyMath m1;
     };
 
+    TEST_F(MulTest, Zero) {
+            EXPECT_EQ(0, m1.mul(0, 0));
+    }
+
     TEST_F(MulTest, Ones) {
             EXPECT_EQ(1, m1.mul(1, 1));
     }
